@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Vanilla zufällige Bilder</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+        }
+
+        #finalCanvas {
+            border: none;
+        }
+
+        /* The larger hidden canvas is not displayed */
+        #hiddenCanvas {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<h1>Vanilla zufällige Bilder</h1>
+
+<!-- The final, visible 256×256 canvas -->
+<canvas id="finalCanvas" width="256" height="256"></canvas>
+<br>
+
+<!-- Buttons to generate and download -->
+<button id="generateBtn">Generate</button>
+<button id="downloadBtn">Download</button>
+
+<!-- Hidden, larger canvas -->
+<canvas id="hiddenCanvas"></canvas>
+
+<script src="script.js"></script>
+</body>
+</html>
