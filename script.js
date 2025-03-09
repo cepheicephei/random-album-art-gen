@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const finalWidth = 256;
     const finalHeight = 256;
     // Desired blur radius (in pixels) for the box blur
-    const blurRadius = 20;
+    const blurRadius = 30;
     // Contrast factor (1.0 = no change, >1.0 increases contrast)
     const contrastFactor = 1.25;
     // Hidden canvas dimensions (providing a buffer for the blur)
@@ -38,11 +38,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // A limited color palette.
     const colorPalette = [
         "#DEE4E7",
-        "#C6D0D5",
-        "#A3B2B8",
-        "#7F949C",
-        "#495B60",
-        "#364447",
+        "#b1c7d1",
+        "#7a8b91",
+        "#47646e",
+        "#43565a",
+        "#253235",
         "#1D2325",
         "#141515"
     ];
@@ -86,7 +86,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /**
      * Generates an image on the entire hidden canvas using a limited palette.
-     * It fills the canvas with a gradient background and draws two random ellipses.
+     * It fills the canvas with a gradient background and draws two ellipses.
+     * The first ellipse is drawn with a radial gradient fill,
+     * and the second ellipse is drawn with a flat color.
      */
     function generateLimitedPaletteImageFull(ctx, width, height, palette) {
         ctx.clearRect(0, 0, width, height);
@@ -98,16 +100,19 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, width, height);
 
-        // Draw two random ellipses.
-        drawRandomEllipse(ctx, width, height, palette);
-        drawRandomEllipse(ctx, width, height, palette);
+        // Draw first ellipse with gradient fill.
+        drawRandomEllipse(ctx, width, height, palette, true);
+        // Draw second ellipse with flat color.
+        drawRandomEllipse(ctx, width, height, palette, false);
     }
 
     /**
-     * Draws a random ellipse.
+     * Draws a random ellipse on the provided context.
      * The ellipse's center is chosen from a donut-shaped region around the canvas center.
+     * If useGradient is true, the ellipse is filled with a radial gradient;
+     * otherwise, it is filled with a flat color.
      */
-    function drawRandomEllipse(ctx, width, height, palette) {
+    function drawRandomEllipse(ctx, width, height, palette, useGradient) {
         const canvasCenterX = width / 2;
         const canvasCenterY = height / 2;
         const offsetRadius = donutInnerRadius + Math.random() * (donutOuterRadius - donutInnerRadius);
@@ -118,9 +123,22 @@ document.addEventListener("DOMContentLoaded", () => {
         const deviation = (Math.random() * 2 - 1) * ellipseDeviationFactor * baseSize;
         const radiusX = baseSize;
         const radiusY = baseSize + deviation;
+
         ctx.beginPath();
         ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI);
-        ctx.fillStyle = randomColorFromPalette(palette);
+        if (useGradient) {
+            // Create a radial gradient fill for the ellipse.
+            const gradColor1 = randomColorFromPalette(palette);
+            const gradColor2 = randomColorFromPalette(palette);
+            const outerRadius = (radiusX + radiusY) / 2;
+            const radialGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, outerRadius);
+            radialGrad.addColorStop(0, gradColor1);
+            radialGrad.addColorStop(1, gradColor2);
+            ctx.fillStyle = radialGrad;
+        } else {
+            // Use a flat color fill.
+            ctx.fillStyle = randomColorFromPalette(palette);
+        }
         ctx.fill();
     }
 
