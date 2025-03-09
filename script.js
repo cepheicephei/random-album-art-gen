@@ -47,34 +47,58 @@ document.addEventListener("DOMContentLoaded", () => {
         "#141515"
     ];
 
-    // When "Generate" is clicked:
     generateBtn.addEventListener("click", () => {
         // 1) Generate an image on the hidden canvas using the limited palette.
         //    This version fills the entire hidden canvas so that no transparent edge exists.
         generateLimitedPaletteImageFull(ctxHidden, hiddenWidth, hiddenHeight, colorPalette);
 
-        // 2) Apply the blur filter to the entire hidden canvas on the temporary canvas.
-        tempCtx.clearRect(0, 0, hiddenWidth, hiddenHeight);
-        tempCtx.filter = `blur(${blurRadius}px)`;
-        tempCtx.drawImage(hiddenCanvas, 0, 0);
-        tempCtx.filter = "none"; // Reset filter
+        // 2) Apply the blur filter. Use native canvas filtering if supported,
+        //    otherwise use a CSS filter fallback on the final canvas.
+        if ('filter' in ctxFinal) {
+            // Use canvas filter on the offscreen temp canvas.
+            tempCtx.clearRect(0, 0, hiddenWidth, hiddenHeight);
+            tempCtx.filter = `blur(${blurRadius}px)`;
+            tempCtx.drawImage(hiddenCanvas, 0, 0);
+            tempCtx.filter = "none"; // Reset filter
 
-        // 3) Clear the final (visible) canvas.
-        ctxFinal.clearRect(0, 0, finalWidth, finalHeight);
+            // 3) Clear the final (visible) canvas.
+            ctxFinal.clearRect(0, 0, finalWidth, finalHeight);
 
-        // 4) Crop the central region from the temp canvas (which has the blur applied)
-        //    and draw it onto the final canvas.
-        ctxFinal.drawImage(
-            tempCanvas,
-            blurRadius,      // source x offset
-            blurRadius,      // source y offset
-            finalWidth,      // source width
-            finalHeight,     // source height
-            0,               // destination x
-            0,               // destination y
-            finalWidth,      // destination width
-            finalHeight      // destination height
-        );
+            // 4) Crop the central region from the temp canvas (which has the blur applied)
+            //    and draw it onto the final canvas.
+            ctxFinal.drawImage(
+                tempCanvas,
+                blurRadius,      // source x offset
+                blurRadius,      // source y offset
+                finalWidth,      // source width
+                finalHeight,     // source height
+                0,               // destination x
+                0,               // destination y
+                finalWidth,      // destination width
+                finalHeight      // destination height
+            );
+        } else {
+            // Fallback: apply a CSS blur filter to the final canvas.
+            // First, crop the image from the hidden canvas without applying blur.
+            ctxFinal.clearRect(0, 0, finalWidth, finalHeight);
+            ctxFinal.drawImage(
+                hiddenCanvas,
+                blurRadius,      // source x offset (crop center)
+                blurRadius,      // source y offset
+                finalWidth,      // source width
+                finalHeight,     // source height
+                0,               // destination x
+                0,               // destination y
+                finalWidth,      // destination width
+                finalHeight      // destination height
+            );
+            // Then apply a CSS filter to the final canvas element.
+            finalCanvas.style.filter = `blur(${blurRadius}px)`;
+            // Optionally, remove the CSS filter after a short delay so that further operations work normally.
+            setTimeout(() => {
+                finalCanvas.style.filter = "";
+            }, 50);
+        }
 
         // 5) Enhance the contrast of the final image.
         const imageData = ctxFinal.getImageData(0, 0, finalWidth, finalHeight);
@@ -82,7 +106,6 @@ document.addEventListener("DOMContentLoaded", () => {
         ctxFinal.putImageData(contrastedData, 0, 0);
     });
 
-    // When "Download" is clicked:
     downloadBtn.addEventListener("click", () => {
         const dataURL = finalCanvas.toDataURL("image/png");
         const link = document.createElement("a");
