@@ -1,16 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
+    <meta charset="UTF-8"/>
     <title>Vanilla zufällige Bilder</title>
     <style>
         body {
             font-family: sans-serif;
             margin: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            text-align: center;
         }
 
         #finalCanvas {
             border: none;
+            margin-bottom: 20px;
+        }
+
+        button {
+            font-size: 1.2em;
+            padding: 10px 20px;
+            margin: 10px;
         }
 
         /* The larger hidden canvas is not displayed */
@@ -24,11 +38,12 @@
 
 <!-- The final, visible 256×256 canvas -->
 <canvas id="finalCanvas" width="256" height="256"></canvas>
-<br>
 
 <!-- Buttons to generate and download -->
-<button id="generateBtn">Generate</button>
-<button id="downloadBtn">Download</button>
+<div>
+    <button id="generateBtn">Generate</button>
+    <button id="downloadBtn">Download</button>
+</div>
 
 <!-- Hidden, larger canvas -->
 <canvas id="hiddenCanvas"></canvas>
