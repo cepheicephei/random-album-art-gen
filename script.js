@@ -55,10 +55,10 @@ document.addEventListener("DOMContentLoaded", () => {
         // "#384e53",
         // "#2a3639",
         // "#080c10",
-        "#0A1318",
-        "#D2DCDB",
-        "#D2DCDB",
-        "#9DBCB7",
+        "#d8b12b",
+        "#6493da",
+        "#5d5ac9",
+        "#4dab6d",
 
     ];
 
@@ -212,10 +212,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const normalizedNoise = (noise + 3) / 6;
 
                 // Map the noise to our desired radius range
-                const radius = Math.floor(minRadius + normalizedNoise * (maxRadius - minRadius));
-
-                // Store the radius in our map
-                map[y * width + x] = radius;
+                map[y * width + x] = Math.floor(minRadius + normalizedNoise * (maxRadius - minRadius));
             }
         }
 
@@ -385,7 +382,7 @@ document.addEventListener("DOMContentLoaded", () => {
      * Applies noise as the final step to the image for a grainy texture effect.
      * Inspired by SVG turbulence filters but implemented directly with canvas.
      */
-    function applyNoise(ctx, width, height, noiseOpacity = 0.1, noiseScale = 12) {
+    function applyNoise(ctx, width, height, noiseOpacity = 0.08, noiseScale = 50) {
         // Create a temporary canvas for the noise
         const noiseCanvas = document.createElement('canvas');
         noiseCanvas.width = width;
