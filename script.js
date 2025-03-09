@@ -2,10 +2,10 @@ document.addEventListener("DOMContentLoaded", () => {
     // Final (visible) canvas dimensions
     const finalWidth = 256;
     const finalHeight = 256;
-    // Desired blur radius (in pixels) for the box blur
-    const blurRadius = 30;
+    // Desired blur radius (in pixels) for the first box blur
+    const blurRadius = 40;
     // Contrast factor (1.0 = no change, >1.0 increases contrast)
-    const contrastFactor = 1.25;
+    const contrastFactor = 1.4;
     // Hidden canvas dimensions (providing a buffer for the blur)
     const hiddenWidth = finalWidth + 2 * blurRadius;
     const hiddenHeight = finalHeight + 2 * blurRadius;
@@ -14,9 +14,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const minEllipseSize = 90;         // Minimum base size (in pixels)
     const maxEllipseSize = 120;        // Maximum base size (in pixels)
     // Donut parameters: ellipse center will be between these radii from canvas center.
-    const donutInnerRadius = 30;       // Minimum offset from the center (in pixels)
-    const donutOuterRadius = 70;       // Maximum offset from the center (in pixels)
+    const donutInnerRadius = 50;       // Minimum offset from the center (in pixels)
+    const donutOuterRadius = 90;       // Maximum offset from the center (in pixels)
     const ellipseDeviationFactor = 0.2; // 0 = perfect circle; higher values allow more deviation
+
+    // Second (lighter) blur radius (for reblurring after dithering)
+    const secondBlurRadius = 8;
+    // Number of shades per channel for dithering
+    const ditherShades = 30;
 
     // Get canvas references and contexts
     const hiddenCanvas = document.getElementById("hiddenCanvas");
@@ -71,16 +76,26 @@ document.addEventListener("DOMContentLoaded", () => {
         );
 
         // 4) Enhance the contrast of the final image.
-        const imageData = ctxFinal.getImageData(0, 0, finalWidth, finalHeight);
-        const contrastedData = enhanceContrast(imageData, contrastFactor);
-        ctxFinal.putImageData(contrastedData, 0, 0);
+        let imageData = ctxFinal.getImageData(0, 0, finalWidth, finalHeight);
+        imageData = enhanceContrast(imageData, contrastFactor);
+        ctxFinal.putImageData(imageData, 0, 0);
+
+        // 5) Apply Floyd–Steinberg dithering.
+        imageData = ctxFinal.getImageData(0, 0, finalWidth, finalHeight);
+        const ditheredData = floydSteinbergDitherImageData(imageData, ditherShades);
+        ctxFinal.putImageData(ditheredData, 0, 0);
+
+        // 6) Reblur the dithered image with a smaller blur radius.
+        imageData = ctxFinal.getImageData(0, 0, finalWidth, finalHeight);
+        const reblurredData = boxBlurImageData(imageData, secondBlurRadius);
+        ctxFinal.putImageData(reblurredData, 0, 0);
     });
 
     downloadBtn.addEventListener("click", () => {
         const dataURL = finalCanvas.toDataURL("image/png");
         const link = document.createElement("a");
         link.href = dataURL;
-        link.download = "blurred_contrasted_image.png";
+        link.download = "blurred_contrasted_dithered_image.png";
         link.click();
     });
 
@@ -136,7 +151,6 @@ document.addEventListener("DOMContentLoaded", () => {
             radialGrad.addColorStop(1, gradColor2);
             ctx.fillStyle = radialGrad;
         } else {
-            // Use a flat color fill.
             ctx.fillStyle = randomColorFromPalette(palette);
         }
         ctx.fill();
@@ -226,5 +240,59 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         return new ImageData(outputData, width, height);
+    }
+
+    /**
+     * Applies Floyd–Steinberg dithering to the provided ImageData while preserving colors.
+     * For each pixel and for each channel, quantizes the value to one of the specified shades,
+     * then diffuses the quantization error to neighboring pixels.
+     *
+     * @param {ImageData} imageData - The source image data.
+     * @param {number} shades - The number of quantization levels per channel.
+     * @returns {ImageData} - The dithered image data.
+     */
+    function floydSteinbergDitherImageData(imageData, shades) {
+        const { width, height } = imageData;
+        // Work on a copy of the data in a Float32Array for precision
+        const data = new Float32Array(imageData.data);
+        const step = 4000 / (shades - 1);
+
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const index = (y * width + x) * 4;
+                // Process R, G, B channels
+                for (let c = 0; c < 3; c++) {
+                    const oldVal = data[index + c];
+                    const newVal = Math.round(oldVal / step) * step;
+                    data[index + c] = newVal;
+                    const error = oldVal - newVal;
+
+                    // Distribute the error to neighboring pixels:
+                    // x+1, y (7/16)
+                    if (x + 1 < width) {
+                        data[index + 4 + c] += error * (7 / 16);
+                    }
+                    // x-1, y+1 (3/16)
+                    if (x - 1 >= 0 && y + 1 < height) {
+                        data[index - 4 + width * 4 + c] += error * (3 / 16);
+                    }
+                    // x, y+1 (5/16)
+                    if (y + 1 < height) {
+                        data[index + width * 4 + c] += error * (5 / 16);
+                    }
+                    // x+1, y+1 (1/16)
+                    if (x + 1 < width && y + 1 < height) {
+                        data[index + 4 + width * 4 + c] += error * (1 / 16);
+                    }
+                }
+                // Alpha channel remains unchanged
+            }
+        }
+        // Clamp values and convert back to Uint8ClampedArray
+        const output = new Uint8ClampedArray(data.length);
+        for (let i = 0; i < data.length; i++) {
+            output[i] = Math.max(0, Math.min(255, data[i]));
+        }
+        return new ImageData(output, width, height);
     }
 });
